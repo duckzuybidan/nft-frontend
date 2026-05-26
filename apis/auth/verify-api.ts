@@ -10,7 +10,7 @@ type VerifyResponse = {
   accessToken: string;
 };
 
-export const verifySignature = async (data: VerifyRequest) => {
+export const verifySignatureApi = async (data: VerifyRequest) => {
   const res = await api.post<VerifyResponse>("/auth/verify", data);
   return res.data;
 };

@@ -1,4 +1,4 @@
-import { getNonce } from "./nonce-api";
-import { verifySignature } from "./verify-api";
+import { getNonceApi } from "./nonce-api";
+import { verifySignatureApi } from "./verify-api";
 
-export { getNonce, verifySignature };
+export { getNonceApi, verifySignatureApi };

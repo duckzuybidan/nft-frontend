@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { useMutation } from "@tanstack/react-query";
-import { getNonce, verifySignature } from "@/apis/auth";
+import { getNonceApi, verifySignatureApi } from "@/apis/auth";
 import { ACCESS_TOKEN } from "@/lib/var";
 import { signMessage } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const useAuth = () => {
   const { address, isConnected } = useAccount();
@@ -17,7 +18,7 @@ export const useAuth = () => {
     mutationFn: async () => {
       if (!address) throw new Error("Wallet not connected");
 
-      const { nonce } = await getNonce({ address });
+      const { nonce } = await getNonceApi({ address });
 
       const { message, signature } = await signMessage(
         address,
@@ -25,7 +26,7 @@ export const useAuth = () => {
         signMessageAsync,
       );
 
-      return verifySignature({
+      return verifySignatureApi({
         address,
         message,
         signature,
@@ -36,11 +37,14 @@ export const useAuth = () => {
       if (typeof window !== "undefined") {
         localStorage.setItem(ACCESS_TOKEN, data.accessToken);
         setToken(data.accessToken);
+        toast.success("Successfully logged in");
       }
     },
 
-    onError: (error) => {
-      console.error("Login failed:", error);
+    onError: (error: any) => {
+      const message = error.response?.data?.message || error.message;
+      toast.error(`Login failed: ${message}`);
+      console.error("Login failed:", message);
     },
   });
 

@@ -8,7 +8,7 @@ type NonceResponse = {
   nonce: string;
 };
 
-export const getNonce = async (data: NonceRequest) => {
+export const getNonceApi = async (data: NonceRequest) => {
   const res = await api.post<NonceResponse>("/auth/nonce", data);
   return res.data;
 };

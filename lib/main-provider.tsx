@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { Toaster } from "sonner";
 
-const config = getDefaultConfig({
+export const config = getDefaultConfig({
   appName: "NFT MARKET",
   projectId: "1a461664f1ea4a1471296923796ce452",
 

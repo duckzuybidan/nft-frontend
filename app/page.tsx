@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useSendTransaction, useAccount } from "wagmi";
 import { parseEther } from "viem";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Page() {
   const { isConnected } = useAccount();
@@ -17,7 +18,7 @@ export default function Page() {
 
   const handleBuy = () => {
     if (!isConnected) {
-      alert("Please connect your wallet first!");
+      toast.error("Please connect your wallet first!");
       return;
     }
 

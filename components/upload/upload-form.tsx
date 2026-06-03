@@ -46,7 +46,6 @@ export function UploadForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     await uploadFile(values.file[0]);
-    alert("File uploaded successfully!");
     form.reset();
     setFileInfo(null);
   }

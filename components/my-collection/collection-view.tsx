@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { DeleteConfirmModal } from "./delete-confirm-modal";
+import { ListFileModal } from "./list-file-modal";
+import { Tag } from "lucide-react";
 
 export function CollectionView() {
   const {
@@ -48,6 +50,10 @@ export function CollectionView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [listingFile, setListingFile] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const handleStartEdit = (id: string, name: string) => {
     setEditingId(id);
@@ -192,6 +198,14 @@ export function CollectionView() {
                         Rename
                       </DropdownMenuItem>
                       <DropdownMenuItem
+                        onClick={() =>
+                          setListingFile({ id: file.id, name: file.fileName })
+                        }
+                      >
+                        <Tag className="h-3.5 w-3.5 mr-2" />
+                        List on Market
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
                         onClick={() => setDeletingId(file.id)}
                       >
@@ -263,6 +277,12 @@ export function CollectionView() {
         onClose={() => setDeletingId(null)}
         onConfirm={handleDelete}
         isLoading={isDeleting}
+      />
+      <ListFileModal
+        fileId={listingFile?.id || null}
+        fileName={listingFile?.name || ""}
+        isOpen={!!listingFile}
+        onClose={() => setListingFile(null)}
       />
     </>
   );

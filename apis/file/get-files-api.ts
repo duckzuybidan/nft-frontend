@@ -1,9 +1,5 @@
 import api from "../api-config";
 
-type GetUserFilesRequest = {
-  userId: string;
-};
-
 type FileResponse = {
   id: string;
   cid: string;
@@ -18,13 +14,6 @@ type FileResponse = {
     previewImage: string | null;
     createdAt: string;
   };
-};
-
-export const getUserFilesApi = async (
-  payload: GetUserFilesRequest,
-): Promise<FileResponse[]> => {
-  const response = await api.get("/file/by-user-id", { params: payload });
-  return response.data;
 };
 
 export const getMyFilesApi = async (): Promise<FileResponse[]> => {

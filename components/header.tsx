@@ -23,6 +23,22 @@ export default function Header() {
           <span className="hidden md:inline-block">NFT MARKET</span>
         </Link>
 
+        {/* Navigation Links */}
+        <nav className="hidden lg:flex items-center gap-6 text-sm font-medium ml-4">
+          <Link
+            href="/market"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Marketplace
+          </Link>
+          <Link
+            href="/my-collection"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            My Collection
+          </Link>
+        </nav>
+
         {/* Search Bar */}
         <div className="flex-1 hidden md:flex items-center relative group">
           <div className="absolute left-3 text-muted-foreground group-focus-within:text-foreground transition-colors">

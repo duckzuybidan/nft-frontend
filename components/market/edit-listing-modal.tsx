@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 import {
   Dialog,
   DialogContent,
@@ -11,10 +14,29 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useMarket } from "@/hooks/market-hook";
 import { Loader2 } from "lucide-react";
 import { ListingResponse } from "@/apis/market";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+const formSchema = z
+  .object({
+    buyPrice: z.string().optional(),
+    hirePrice: z.string().optional(),
+  })
+  .refine((data) => data.buyPrice || data.hirePrice, {
+    message: "At least one price (sale or hire) must be provided",
+    path: ["buyPrice"],
+  });
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface EditListingModalProps {
   listing: ListingResponse | null;
@@ -28,31 +50,33 @@ export function EditListingModal({
   onClose,
 }: EditListingModalProps) {
   const { updateListing, isUpdating } = useMarket();
-  const [buyPrice, setBuyPrice] = useState("");
-  const [hirePrice, setHirePrice] = useState("");
-  const [tokenId, setTokenId] = useState("");
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      buyPrice: "",
+      hirePrice: "",
+    },
+  });
 
   useEffect(() => {
     if (listing) {
-      setBuyPrice(listing.buyPrice || "");
-      setHirePrice(listing.hirePrice || "");
-      setTokenId(listing.tokenId || "");
+      form.reset({
+        buyPrice: listing.buyPrice || "",
+        hirePrice: listing.hirePrice || "",
+      });
     }
-  }, [listing]);
+  }, [listing, form]);
 
-  const handleUpdate = async () => {
+  const onSubmit = async (values: FormValues) => {
     if (!listing) return;
-    if (!buyPrice && !hirePrice) {
-      return;
-    }
 
     try {
       await updateListing({
         listingId: listing.id,
         data: {
-          buyPrice: buyPrice || undefined,
-          hirePrice: hirePrice || undefined,
-          tokenId: tokenId || undefined,
+          buyPrice: values.buyPrice || undefined,
+          hirePrice: values.hirePrice || undefined,
         },
       });
       onClose();
@@ -70,54 +94,64 @@ export function EditListingModal({
             Update your prices for "{listing?.file.metadata.fileName}".
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="edit-buyPrice">Sale Price (ETH)</Label>
-            <Input
-              id="edit-buyPrice"
-              type="number"
-              step="0.001"
-              placeholder="e.g. 0.05"
-              value={buyPrice}
-              onChange={(e) => setBuyPrice(e.target.value)}
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4 py-4"
+          >
+            <FormField
+              control={form.control}
+              name="buyPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sale Price (ETH)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.001"
+                      placeholder="e.g. 0.05"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-hirePrice">Hire Price (ETH / day)</Label>
-            <Input
-              id="edit-hirePrice"
-              type="number"
-              step="0.001"
-              placeholder="e.g. 0.005"
-              value={hirePrice}
-              onChange={(e) => setHirePrice(e.target.value)}
+            <FormField
+              control={form.control}
+              name="hirePrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Hire Price (ETH / day)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.001"
+                      placeholder="e.g. 0.005"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-tokenId">Token ID (Optional)</Label>
-            <Input
-              id="edit-tokenId"
-              placeholder="NFT Token ID"
-              value={tokenId}
-              onChange={(e) => setTokenId(e.target.value)}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleUpdate} disabled={isUpdating || (!buyPrice && !hirePrice)}>
-            {isUpdating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Updating...
-              </>
-            ) : (
-              "Update Listing"
-            )}
-          </Button>
-        </DialogFooter>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Listing"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

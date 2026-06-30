@@ -4,6 +4,7 @@ import {
   updateListingApi,
   removeListingApi,
   listFileApi,
+  buyFileApi,
 } from "@/apis/market";
 import { PaginatedResponse } from "@/types/paginated-response";
 import { ListingType } from "@/types/listing-type";
@@ -72,6 +73,17 @@ export const useMarket = () => {
     },
   });
 
+  const buyFileMutation = useMutation({
+    mutationFn: (listingId: string) => buyFileApi(listingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["market-listings"] });
+      toast.success("File bought successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to buy file");
+    },
+  });
+
   return {
     listings: data?.data || [],
     isLoading,
@@ -89,5 +101,7 @@ export const useMarket = () => {
     isRemoving: removeListingMutation.isPending,
     listFile: listFileMutation.mutateAsync,
     isListing: listFileMutation.isPending,
+    buyFile: buyFileMutation.mutateAsync,
+    isBuying: buyFileMutation.isPending,
   };
 };

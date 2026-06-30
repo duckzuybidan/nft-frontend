@@ -18,14 +18,11 @@ import {
   Film,
   Music,
   Type,
-  Eye,
   ShoppingCart,
   Calendar,
   ArrowLeft,
 } from "lucide-react";
 import { formatBytes } from "@/lib/utils";
-import { openFileApi } from "@/apis/file";
-import { toast } from "sonner";
 import { useAuth } from "@/hooks/auth-hook";
 import { useMarket } from "@/hooks/market-hook";
 import { EditListingModal } from "@/components/market/edit-listing-modal";
@@ -35,10 +32,9 @@ export default function ListingDetailPage() {
   const router = useRouter();
   const [listing, setListing] = useState<ListingType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isOpening, setIsOpening] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { address } = useAuth();
-  const { removeListing, isRemoving } = useMarket();
+  const { removeListing, isRemoving, buyFile, isBuying } = useMarket();
 
   const listingId = params.id as string;
 
@@ -98,23 +94,6 @@ export default function ListingDetailPage() {
     return <FileText className="h-16 w-16 text-gray-500" />;
   };
 
-  const handleOpen = async () => {
-    try {
-      setIsOpening(true);
-      toast.loading("Opening file...", { id: "open-file" });
-      const blob = await openFileApi(listing.file.id);
-      const url = window.URL.createObjectURL(
-        new Blob([blob], { type: listing.file.metadata.mimeType }),
-      );
-      window.open(url, "_blank");
-      toast.success("File opened", { id: "open-file" });
-    } catch (error) {
-      toast.error("Failed to open file", { id: "open-file" });
-    } finally {
-      setIsOpening(false);
-    }
-  };
-
   const handleRemove = async () => {
     if (confirm("Are you sure you want to remove this listing?")) {
       await removeListing(listing.id);
@@ -154,11 +133,6 @@ export default function ListingDetailPage() {
               )}
             </div>
           </Card>
-
-          <Button className="w-full" onClick={handleOpen} disabled={isOpening}>
-            <Eye className="h-4 w-4 mr-2" />
-            Preview File
-          </Button>
         </div>
 
         {/* Info Section */}
@@ -247,8 +221,12 @@ export default function ListingDetailPage() {
               ) : (
                 <div className="flex w-full gap-3">
                   {listing.buyPrice && (
-                    <Button className="flex-1 h-12 text-lg font-semibold shadow-md hover:shadow-lg transition-shadow">
-                      Buy {listing.buyPrice} ETH
+                    <Button
+                      className="flex-1 h-12 text-lg font-semibold shadow-md hover:shadow-lg transition-shadow"
+                      onClick={() => buyFile(listing.id)}
+                      disabled={isBuying}
+                    >
+                      {isBuying ? "Buying..." : `Buy ${listing.buyPrice} ETH`}
                     </Button>
                   )}
                   {listing.hirePrice && (

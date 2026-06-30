@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { Toaster } from "sonner";
 
-const config = getDefaultConfig({
+export const config = getDefaultConfig({
   appName: "NFT MARKET",
   projectId: "1a461664f1ea4a1471296923796ce452",
 
@@ -15,7 +15,8 @@ const config = getDefaultConfig({
   transports: {
     [mainnet.id]: http("https://rpc.ankr.com/eth"),
 
-    [sepolia.id]: http("https://rpc.ankr.com/eth_sepolia"),
+    [sepolia.id]: http("https://ethereum-sepolia-rpc.publicnode.com"),
+
   },
 });
 

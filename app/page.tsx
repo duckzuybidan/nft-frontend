@@ -1,31 +1,63 @@
-"use client";
-
-import { Button } from "@/components/ui/button";
+"use client"; 
 import { useSendTransaction, useAccount } from "wagmi";
 import { parseEther } from "viem";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+ 
 
+import { Button } from "@/components/ui/button";
+
+import { 
+  useWriteContract,
+} from "wagmi";
+
+import { nftService }
+from "@/services/nft"; 
+ 
+
+  
+ 
 export default function Page() {
-  const { isConnected } = useAccount();
-  const {
-    sendTransaction,
-    data: hash,
-    isPending,
-    isError,
-    error,
-  } = useSendTransaction();
 
-  const handleBuy = () => {
+  const { isConnected } = useAccount();
+
+  const { 
+
+    data: hash,
+
+    isPending,
+
+    isError,
+
+    error,
+  } = useWriteContract();
+
+    const handleBuy = async () => {
+
     if (!isConnected) {
-      toast.error("Please connect your wallet first!");
+
+      alert(
+        "Please connect wallet first",
+      );
+
       return;
     }
 
-    sendTransaction({
-      to: "0x0000000000000000000000000000000000000000", // Burn address for demo
-      value: parseEther("0.1"),
-    });
+    try {
+
+      await nftService.publishContent({
+        metadataURI: "ipfs://...",
+        contentHash: "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        contentType: 0,
+        title: "Movie",
+        contentPrice: "1",
+        accessPrice: "0.01",
+        maxPasses: 100,
+      });
+
+    } catch (err) {
+
+      console.error(err);
+    }
   };
 
   return (

@@ -1,19 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getMarketListingsApi,
-  ListingResponse,
   updateListingApi,
   removeListingApi,
   listFileApi,
 } from "@/apis/market";
+import { PaginatedResponse } from "@/types/paginated-response";
+import { ListingType } from "@/types/listing-type";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export const useMarket = () => {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
-  const { data, isLoading, error } = useQuery<ListingResponse[]>({
-    queryKey: ["market-listings"],
-    queryFn: getMarketListingsApi,
+  const { data, isLoading, error, isFetching } = useQuery<
+    PaginatedResponse<ListingType>
+  >({
+    queryKey: ["market-listings", page],
+    queryFn: async (): Promise<PaginatedResponse<ListingType>> => {
+      const response = await getMarketListingsApi(page, limit);
+      return {
+        ...response,
+        data: response.data.map((item) => item),
+      };
+    },
   });
 
   const updateListingMutation = useMutation({
@@ -61,9 +73,16 @@ export const useMarket = () => {
   });
 
   return {
-    listings: data || [],
+    listings: data?.data || [],
     isLoading,
+    isFetching,
     error,
+    pagination: {
+      page: data?.page || 1,
+      totalPages: data?.totalPages || 1,
+      total: data?.total || 0,
+      setPage,
+    },
     updateListing: updateListingMutation.mutateAsync,
     isUpdating: updateListingMutation.isPending,
     removeListing: removeListingMutation.mutateAsync,

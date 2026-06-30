@@ -1,22 +1,14 @@
 import api from "../api-config";
+import { PaginatedResponse } from "@/types/paginated-response";
 
-type FileResponse = {
-  id: string;
-  cid: string;
-  createdAt: string;
-  userId: string;
-  metadata: {
-    id: string;
-    fileId: string;
-    fileName: string;
-    mimeType: string;
-    size: number;
-    previewImage: string | null;
-    createdAt: string;
-  };
-};
-
-export const getMyFilesApi = async (): Promise<FileResponse[]> => {
-  const response = await api.get("/file/my-files");
+const getMyFilesApi = async (
+  page: number = 1,
+  limit: number = 10,
+): Promise<PaginatedResponse<any>> => {
+  const response = await api.get("/file/my-files", {
+    params: { page, limit },
+  });
   return response.data;
 };
+
+export { getMyFilesApi };

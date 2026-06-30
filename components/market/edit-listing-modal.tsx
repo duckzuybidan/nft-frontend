@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { ListingType } from "@/types/listing-type";
+
 import * as z from "zod";
 import {
   Dialog,
@@ -16,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMarket } from "@/hooks/market-hook";
 import { Loader2 } from "lucide-react";
-import { ListingResponse } from "@/apis/market";
 import {
   Form,
   FormControl,
@@ -39,7 +40,7 @@ const formSchema = z
 type FormValues = z.infer<typeof formSchema>;
 
 interface EditListingModalProps {
-  listing: ListingResponse | null;
+  listing: ListingType | null;
   isOpen: boolean;
   onClose: () => void;
 }

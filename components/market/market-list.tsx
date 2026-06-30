@@ -9,9 +9,10 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { Pagination } from "@/components/ui/pagination";
 
 export function MarketList() {
-  const { listings, isLoading, error } = useMarket();
+  const { listings, isLoading, error, pagination, isFetching } = useMarket();
 
   if (isLoading) {
     return (
@@ -51,10 +52,22 @@ export function MarketList() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-      {listings.map((listing) => (
-        <MarketCard key={listing.id} listing={listing} />
-      ))}
+    <div className="space-y-6">
+      {isFetching && (
+        <div className="flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+        {listings.map((listing) => (
+          <MarketCard key={listing.id} listing={listing} />
+        ))}
+      </div>
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={pagination.setPage}
+      />
     </div>
   );
 }

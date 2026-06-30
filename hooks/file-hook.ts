@@ -6,27 +6,36 @@ import {
   openFileApi,
 } from "@/apis/file";
 import { FileType } from "@/types/file-type";
+import { PaginatedResponse } from "@/types/paginated-response";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export const useMyFiles = () => {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
-  const { data, isLoading } = useQuery<FileType[]>({
-    queryKey: ["my-files"],
-    queryFn: async (): Promise<FileType[]> => {
-      const response = await getMyFilesApi();
-      return response.map((item) => ({
-        id: item.id,
-        cid: item.cid,
-        fileName: item.metadata.fileName,
-        mimeType: item.metadata.mimeType,
-        size: item.metadata.size,
-        previewImage: item.metadata.previewImage,
-        createdAt: item.createdAt,
-        userId: item.userId,
-      }));
+  const { data, isLoading, isFetching } = useQuery<PaginatedResponse<FileType>>(
+    {
+      queryKey: ["my-files", page],
+      queryFn: async (): Promise<PaginatedResponse<FileType>> => {
+        const response = await getMyFilesApi(page, limit);
+        return {
+          ...response,
+          data: response.data.map((item) => ({
+            id: item.id,
+            cid: item.cid,
+            fileName: item.metadata.fileName,
+            mimeType: item.metadata.mimeType,
+            size: item.metadata.size,
+            previewImage: item.metadata.previewImage,
+            createdAt: item.createdAt,
+            userId: item.userId,
+          })),
+        };
+      },
     },
-  });
+  );
 
   const updateFileMutation = useMutation({
     mutationFn: ({ fileId, fileName }: { fileId: string; fileName: string }) =>
@@ -78,8 +87,15 @@ export const useMyFiles = () => {
     },
   });
   return {
-    files: data || [],
+    files: data?.data || [],
     isLoading,
+    isFetching,
+    pagination: {
+      page: data?.page || 1,
+      totalPages: data?.totalPages || 1,
+      total: data?.total || 0,
+      setPage,
+    },
     updateFile: updateFileMutation.mutateAsync,
     isUpdating: updateFileMutation.isPending,
     deleteFile: deleteFileMutation.mutateAsync,

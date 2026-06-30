@@ -34,17 +34,20 @@ import { Input } from "@/components/ui/input";
 import { DeleteConfirmModal } from "./delete-confirm-modal";
 import { ListFileModal } from "./list-file-modal";
 import { Tag } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 export function CollectionView() {
   const {
     files,
     isLoading,
+    isFetching,
     updateFile,
     deleteFile,
     isUpdating,
     isDeleting,
     openFile,
     isOpening,
+    pagination,
   } = useMyFiles();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -124,7 +127,12 @@ export function CollectionView() {
   }
 
   return (
-    <>
+    <div className="space-y-6">
+      {isFetching && (
+        <div className="flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
         {files.map((file) => (
           <Card
@@ -272,6 +280,11 @@ export function CollectionView() {
           </Card>
         ))}
       </div>
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={pagination.setPage}
+      />
       <DeleteConfirmModal
         isOpen={!!deletingId}
         onClose={() => setDeletingId(null)}
@@ -284,6 +297,6 @@ export function CollectionView() {
         isOpen={!!listingFile}
         onClose={() => setListingFile(null)}
       />
-    </>
+    </div>
   );
 }

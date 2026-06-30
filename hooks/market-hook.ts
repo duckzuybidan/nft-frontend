@@ -8,6 +8,10 @@ import {
 } from "@/apis/market";
 import { toast } from "sonner";
 
+
+import { nftService }
+from "@/services/nft"; 
+
 export const useMarket = () => {
   const queryClient = useQueryClient();
 
@@ -45,18 +49,40 @@ export const useMarket = () => {
   });
 
   const listFileMutation = useMutation({
-    mutationFn: (data: {
-      fileId: string;
-      tokenId?: string;
+    mutationFn: async (data: {
+      fileId: string; 
       hirePrice?: string;
       buyPrice?: string;
-    }) => listFileApi(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["market-listings"] });
+    }) => {  
+      const { tokenId } = await nftService.publishContent({
+        metadataURI: data.fileId,
+        contentHash:
+          "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        contentType: 0,
+        title: "Movie",
+      });
+      
+      console.log("tokenId:", tokenId);
+      await listFileApi({
+        ...data,
+        tokenId: tokenId.toString(),
+      });
+ 
+    },
+
+    onSuccess: async () => { 
+      await queryClient.invalidateQueries({
+        queryKey: ["market-listings"],
+      });
+
       toast.success("File listed successfully");
     },
+
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to list file");
+      console.error(error);
+      toast.error(
+        error.response?.data?.message || "Failed to list file"
+      );
     },
   });
 

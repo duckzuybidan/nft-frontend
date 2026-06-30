@@ -15,7 +15,8 @@ export const config = getDefaultConfig({
   transports: {
     [mainnet.id]: http("https://rpc.ankr.com/eth"),
 
-    [sepolia.id]: http("https://rpc.ankr.com/eth_sepolia"),
+    [sepolia.id]: http("https://ethereum-sepolia-rpc.publicnode.com"),
+
   },
 });
 

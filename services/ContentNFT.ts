@@ -5,15 +5,16 @@ import {
   readContract,
   writeContract,
   waitForTransactionReceipt,
+  getTransactionReceipt,
   type Config,
 } from "@wagmi/core";
 
-import { parseEther } from "viem";
+import { parseEther,decodeEventLog  } from "viem";
  
 const { default: ContentNFTABI }  = await import("../artifacts/contracts/ERC_721.sol/ContentNFT.json", { with: { type: "json" } });  
 const { default: AccessTokenABI }  = await import("../artifacts/contracts/ERC_1155.sol/AccessToken.json", { with: { type: "json" } });  
  
-
+ 
 export enum ContentType {
   VIDEO = 0,
   IMAGE = 1,
@@ -130,16 +131,44 @@ export class ContentNFTService {
             BigInt(maxPasses),
           ],
         },
-      );
+      ); 
+     const receipt = await waitForTransactionReceipt(this.config, { hash });
 
-    const receipt =
-      await this.wait(hash);
+ 
+  const log = receipt.logs.find((log) => {
+    try {
+      const decoded = decodeEventLog({
+        abi: ContentNFTABI.abi,
+        data: log.data,
+        topics: log.topics,
+      });
 
-    return {
-      hash,
-      receipt,
-    };
+      return decoded.eventName === "ContentPublished";
+    } catch {
+      return false;
+    }
+  });
+
+  if (!log) {
+    throw new Error("ContentPublished event not found");
   }
+
+  
+  const decoded = decodeEventLog({
+    abi: ContentNFTABI.abi,
+    data: log.data,
+    topics: log.topics,
+  });
+  const tokenId = (decoded.args as any).tokenId as bigint;
+
+  console.log(decoded);
+  console.log(decoded.args);
+  return {
+    hash,
+    receipt,
+    tokenId: tokenId, 
+  };
+}
 
   async purchaseContent(
     contentId: number,

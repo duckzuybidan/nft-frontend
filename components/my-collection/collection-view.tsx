@@ -3,6 +3,7 @@
 import { useMyFiles } from "@/hooks/file-hook";
 import { formatBytes } from "@/lib/utils";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -37,6 +38,8 @@ import { Tag } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 
 export function CollectionView() {
+  const router = useRouter();
+
   const {
     files,
     isLoading,
@@ -45,10 +48,22 @@ export function CollectionView() {
     deleteFile,
     isUpdating,
     isDeleting,
-    openFile,
-    isOpening,
     pagination,
   } = useMyFiles();
+
+  const openViewer = (file: {
+    id: string;
+    fileName: string;
+    mimeType: string;
+  }) => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        `file-meta-${file.id}`,
+        JSON.stringify({ fileName: file.fileName, mimeType: file.mimeType }),
+      );
+    }
+    router.push(`/my-files/${file.id}`);
+  };
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -156,9 +171,7 @@ export function CollectionView() {
               )}
               <div
                 className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer"
-                onClick={() =>
-                  openFile({ fileId: file.id, mimeType: file.mimeType })
-                }
+                onClick={() => openViewer(file)}
               >
                 <Button
                   size="icon"
@@ -166,15 +179,10 @@ export function CollectionView() {
                   className="h-8 w-8"
                   onClick={(e) => {
                     e.stopPropagation();
-                    openFile({ fileId: file.id, mimeType: file.mimeType });
+                    openViewer(file);
                   }}
-                  disabled={isOpening}
                 >
-                  {isOpening ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Eye className="h-3.5 w-3.5" />
-                  )}
+                  <Eye className="h-3.5 w-3.5" />
                 </Button>
                 <div onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
@@ -188,16 +196,9 @@ export function CollectionView() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-32">
-                      <DropdownMenuItem
-                        onClick={() =>
-                          openFile({
-                            fileId: file.id,
-                            mimeType: file.mimeType,
-                          })
-                        }
-                      >
+                      <DropdownMenuItem onClick={() => openViewer(file)}>
                         <Eye className="h-3.5 w-3.5 mr-2" />
-                        Open
+                        View
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleStartEdit(file.id, file.fileName)}
@@ -260,9 +261,7 @@ export function CollectionView() {
                 <CardTitle
                   className="text-xs font-medium truncate cursor-pointer hover:text-primary transition-colors"
                   title={file.fileName}
-                  onClick={() =>
-                    openFile({ fileId: file.id, mimeType: file.mimeType })
-                  }
+                  onClick={() => openViewer(file)}
                 >
                   {file.fileName}
                 </CardTitle>

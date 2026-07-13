@@ -75,8 +75,7 @@ export const useMarket = () => {
         contentType: 0,
         title: "Movie",
       });
-      
-      console.log("tokenId:", tokenId);
+       
       await listFileApi({
         ...data,
         tokenId: tokenId.toString(),
@@ -101,7 +100,24 @@ export const useMarket = () => {
   });
 
   const buyFileMutation = useMutation({
-    mutationFn: (listingId: string) => buyFileApi(listingId),
+    mutationFn: async (data: {
+      fileId: string;  
+      price: string; 
+      }) => {  
+        console.log("Buying file with data:", data.price);
+        const result = await nftService.purchaseContent(
+          parseInt(data.fileId),
+          data.price.toString()
+        );
+
+      // Only call API if blockchain transaction succeeded
+      if (result?.receipt?.status === "success") {
+        return await buyFileApi(data.fileId);
+      }
+
+      throw new Error("NFT purchase failed");
+  },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["market-listings"] });
       toast.success("File bought successfully");

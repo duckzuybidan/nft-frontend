@@ -1,272 +1,217 @@
 "use client";
 
-import React, { useRef, useMemo } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useFileViewer } from "@/hooks/file-hook";
 import { Button } from "@/components/ui/button";
-import { Loader2, Maximize2, ArrowLeft } from "lucide-react";
-import { useState, useCallback, useEffect } from "react";
-import dynamic from "next/dynamic";
-import { streamFileUrl, getFile } from "@/apis/file";
-import { useRouter } from "next/navigation";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
-import { FileMetadata } from "@/apis/file/get-file";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Loader2, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { FILE_VIEWER_PAGE } from "@/lib/var";
 
-const Document = dynamic(
-  () => import("react-pdf").then((mod) => mod.Document),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    ),
-  },
-);
+const getStoredPage = (fileId: string): number => {
+  const stored = localStorage.getItem(`${FILE_VIEWER_PAGE}_${fileId}`);
+  const parsed = Number.parseInt(stored ?? "1", 10);
+  return Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
+};
 
-const Page = dynamic(() => import("react-pdf").then((mod) => mod.Page), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center py-20">
-      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-    </div>
-  ),
-});
+const saveStoredPage = (fileId: string, page: number) => {
+  localStorage.setItem(`${FILE_VIEWER_PAGE}_${fileId}`, String(page));
+};
 
-interface FileViewerPageProps {
-  params: Promise<{ fileId: string }>;
-}
-
-export default function FileViewerPage({ params }: FileViewerPageProps) {
+export default function FileViewerPage() {
+  const params = useParams();
   const router = useRouter();
-  const { fileId } = React.use(params);
-  const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [numPages, setNumPages] = useState<number>(0);
-  const [scale, setScale] = useState(1.0);
-  const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
-  const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set([1]));
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const pageRefs = useMemo(() => {
-    const refs: Record<number, React.RefObject<HTMLDivElement>> = {};
-    for (let i = 1; i <= numPages; i++) {
-      refs[i] = React.createRef();
-    }
-    return refs;
-  }, [numPages]);
+  const fileId = params?.fileId as string;
+  const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const [totalPages, setTotalPages] = useState(1);
+  const [mimeType, setMimeType] = useState<string | null>(null);
+  const [title, setTitle] = useState<string>("File Viewer");
+  const [pageUrl, setPageUrl] = useState<string | null>(null);
+  const [pageText, setPageText] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const latestBlobUrlRef = useRef<string | null>(null);
+  const { openFilePage, isLoadingPage } = useFileViewer();
 
   useEffect(() => {
-    import("react-pdf").then(({ pdfjs }) => {
-      pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-      setPdfjsLoaded(true);
-    });
-  }, []);
-
-  useEffect(() => {
-    const fetchMetadata = async () => {
-      try {
-        setIsLoading(true);
-        const metadata = await getFile(fileId);
-        setFileMetadata(metadata);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error("Failed to load file"));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (fileId) {
-      fetchMetadata();
+    if (!fileId) return;
+    const storedMeta = window.sessionStorage.getItem(`file-meta-${fileId}`);
+    if (storedMeta) {
+      const parsed = JSON.parse(storedMeta) as {
+        fileName?: string;
+        mimeType?: string;
+      };
+      setTitle(parsed.fileName || "File Viewer");
+      setMimeType(parsed.mimeType || null);
     }
   }, [fileId]);
 
-  const onDocumentLoadSuccess = useCallback(
-    ({ numPages }: { numPages: number }) => {
-      setNumPages(numPages);
-      setVisiblePages(new Set([1]));
-    },
-    [],
-  );
-
-  const onLoadError = useCallback((error: Error) => {
-    console.error("Error loading PDF:", error);
-  }, []);
-
-  const zoomIn = () => setScale((s) => s + 0.25);
-  const zoomOut = () => setScale((s) => Math.max(0.5, s - 0.25));
-
   useEffect(() => {
-    if (!containerRef.current || numPages === 0) return;
-
-    const observerOptions = {
-      root: containerRef.current,
-      rootMargin: "0px",
-      threshold: 0,
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      setVisiblePages((prev) => {
-        const newSet = new Set(prev);
-        entries.forEach((entry) => {
-          const pageNum = parseInt(entry.target.dataset.pageNum || "0");
-          if (pageNum > 0) {
-            if (entry.isIntersecting) {
-              newSet.add(pageNum);
-            } else {
-              newSet.delete(pageNum);
-            }
-          }
-        });
-        return newSet;
-      });
-    }, observerOptions);
-
-    Object.entries(pageRefs).forEach(([pageNum, ref]) => {
-      if (ref.current) {
-        observer.observe(ref.current);
-      }
-    });
-
+    if (!fileId) return;
+    loadPage(getStoredPage(fileId));
     return () => {
-      observer.disconnect();
+      if (latestBlobUrlRef.current) {
+        window.URL.revokeObjectURL(latestBlobUrlRef.current);
+      }
     };
-  }, [pageRefs, numPages]);
+  }, [fileId]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const loadPage = async (pageNumber: number) => {
+    if (!fileId) return;
 
-  if (error || !fileMetadata) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <p className="text-destructive mb-4">
-          {error?.message || "Failed to load file"}
-        </p>
-        <Button variant="ghost" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-      </div>
-    );
-  }
+    const targetPage = Math.max(1, pageNumber);
+    setPage(targetPage);
+    setPageInput(String(targetPage));
+    setError(null);
+    setPageText(null);
 
-  const fileUrl = streamFileUrl(fileMetadata.id);
+    if (latestBlobUrlRef.current) {
+      window.URL.revokeObjectURL(latestBlobUrlRef.current);
+      latestBlobUrlRef.current = null;
+      setPageUrl(null);
+    }
+
+    try {
+      const { blob, totalPages: total, currentPage } = await openFilePage({
+        fileId,
+        page: targetPage,
+      });
+      setTotalPages(total);
+      setPage(currentPage);
+      setPageInput(String(currentPage));
+      saveStoredPage(fileId, currentPage);
+
+      const shouldRenderText =
+        blob.type.startsWith("text/") ||
+        blob.type === "application/json" ||
+        mimeType === "application/json";
+
+      if (shouldRenderText) {
+        const text = await blob.text();
+        setPageText(text);
+      } else {
+        const blobUrl = window.URL.createObjectURL(blob);
+        latestBlobUrlRef.current = blobUrl;
+        setPageUrl(blobUrl);
+      }
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Unable to render this page.",
+      );
+    }
+  };
+
+  const handleGoToPage = () => {
+    const parsed = Number.parseInt(pageInput, 10);
+    if (Number.isNaN(parsed)) {
+      setPageInput(String(page));
+      return;
+    }
+
+    const clamped = Math.min(Math.max(parsed, 1), totalPages);
+    if (clamped !== page) {
+      loadPage(clamped);
+    } else {
+      setPageInput(String(page));
+    }
+  };
+
+  const handlePageInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      handleGoToPage();
+    }
+    if (event.key === "Escape") {
+      setPageInput(String(page));
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header className="border-b p-4 flex items-center justify-between">
-        <Button variant="ghost" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <h1 className="text-lg font-semibold truncate flex-1 mx-4 text-center">
-          {fileMetadata.fileName}
-        </h1>
-        <div className="flex items-center gap-4">
-          {fileMetadata.mimeType === "application/pdf" && (
-            <div className="flex items-center gap-2 bg-white rounded-lg p-2 shadow-sm">
-              <Button variant="ghost" size="icon" onClick={zoomOut}>
-                <Maximize2 className="h-4 w-4" />
-              </Button>
-              <span className="text-sm">{Math.round(scale * 100)}%</span>
-              <Button variant="ghost" size="icon" onClick={zoomIn}>
-                <Maximize2 className="h-4 w-4 rotate-45" />
-              </Button>
-            </div>
-          )}
-          <a
-            href={fileUrl}
-            target="_blank"
-            rel="noreferrer"
-            download={fileMetadata.fileName}
+    <div className="flex h-dvh min-h-0 flex-col overflow-hidden p-4 md:p-6">
+      <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => router.back()}
+            className="h-10 w-10 shrink-0 rounded-full"
           >
-            <Button variant="ghost">Download</Button>
-          </a>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+
+          <h1 className="truncate text-lg font-semibold md:text-xl">{title}</h1>
         </div>
-      </header>
-      <main ref={containerRef} className="flex-1 overflow-auto bg-gray-100">
-        {fileMetadata.mimeType === "application/pdf" && pdfjsLoaded ? (
-          <div className="flex flex-col items-center py-8 gap-4">
-            <Document
-              file={fileUrl}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={onLoadError}
-              loading={
-                <div className="flex items-center justify-center py-20">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+
+        <div className="flex items-center gap-2 rounded-xl border bg-background px-2 py-1 shadow-sm">
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-9 w-9"
+            onClick={() => loadPage(page - 1)}
+            disabled={page <= 1 || isLoadingPage}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          <div className="flex items-center gap-1.5 px-1">
+            <Input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={pageInput}
+              onChange={(event) => setPageInput(event.target.value)}
+              onBlur={handleGoToPage}
+              onKeyDown={handlePageInputKeyDown}
+              disabled={isLoadingPage}
+              className="h-9 w-14 px-1 text-center text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              aria-label="Page number"
+            />
+            <span className="text-sm text-muted-foreground">/ {totalPages}</span>
+          </div>
+
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-9 w-9"
+            onClick={() => loadPage(page + 1)}
+            disabled={page >= totalPages || isLoadingPage}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1">
+        <Card className="flex min-h-0 w-full flex-1 overflow-hidden">
+          <CardContent className="flex min-h-0 flex-1 p-2 md:p-4">
+            <div className="relative flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden rounded-lg bg-muted/30">
+              {isLoadingPage ? (
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              ) : error ? (
+                <div className="max-w-md rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+                  {error}
                 </div>
-              }
-              error={
-                <div className="text-center p-8">
-                  <p className="text-destructive mb-4">Error loading PDF</p>
+              ) : pageUrl ? (
+                <img
+                  src={pageUrl}
+                  alt={`${title} page ${page}`}
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : pageText ? (
+                <div className="h-full w-full overflow-auto rounded-lg bg-slate-950 p-4 md:p-6">
+                  <pre className="whitespace-pre-wrap wrap-break-word font-mono text-sm leading-relaxed text-slate-100">
+                    {pageText}
+                  </pre>
                 </div>
-              }
-            >
-              {Array.from({ length: numPages }, (_, i) => i + 1).map(
-                (pageNum) => (
-                  <div
-                    key={pageNum}
-                    ref={pageRefs[pageNum]}
-                    data-page-num={pageNum}
-                    className="bg-white shadow-md rounded"
-                  >
-                    {visiblePages.has(pageNum) ? (
-                      <Page
-                        pageNumber={pageNum}
-                        scale={scale}
-                        loading={
-                          <div className="flex items-center justify-center py-40">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                          </div>
-                        }
-                      />
-                    ) : (
-                      <div className="w-[612px] h-[792px] bg-gray-200 flex items-center justify-center text-gray-500 text-lg font-medium">
-                        Page {pageNum} (Loading on scroll)
-                      </div>
-                    )}
-                  </div>
-                ),
+              ) : (
+                <div className="text-sm text-muted-foreground">Rendering...</div>
               )}
-            </Document>
-          </div>
-        ) : fileMetadata.mimeType.startsWith("video/") ? (
-          <div className="flex items-center justify-center h-full">
-            <video
-              controls
-              className="max-h-[80vh] max-w-[90vw]"
-              src={fileUrl}
-            />
-          </div>
-        ) : fileMetadata.mimeType.startsWith("audio/") ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="w-full max-w-lg">
-              <audio controls className="w-full" src={fileUrl} />
             </div>
-          </div>
-        ) : fileMetadata.mimeType.startsWith("image/") ? (
-          <div className="flex items-center justify-center h-full">
-            <img
-              src={fileUrl}
-              alt={fileMetadata.fileName}
-              className="max-h-[80vh] max-w-[90vw] object-contain"
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center p-8">
-              <p className="text-muted-foreground mb-4">
-                Preview not available for this file type
-              </p>
-            </div>
-          </div>
-        )}
-      </main>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useMyFiles } from "@/hooks/file-hook";
 import { formatBytes } from "@/lib/utils";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -35,9 +36,10 @@ import { DeleteConfirmModal } from "./delete-confirm-modal";
 import { ListFileModal } from "./list-file-modal";
 import { Tag } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
-import Link from "next/link";
 
 export function CollectionView() {
+  const router = useRouter();
+
   const {
     files,
     isLoading,
@@ -48,6 +50,20 @@ export function CollectionView() {
     isDeleting,
     pagination,
   } = useMyFiles();
+
+  const openViewer = (file: {
+    id: string;
+    fileName: string;
+    mimeType: string;
+  }) => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        `file-meta-${file.id}`,
+        JSON.stringify({ fileName: file.fileName, mimeType: file.mimeType }),
+      );
+    }
+    router.push(`/my-files/${file.id}`);
+  };
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -138,29 +154,78 @@ export function CollectionView() {
             key={file.id}
             className="overflow-hidden group hover:shadow-md transition-all duration-300 border-muted-foreground/10"
           >
-            <Link href={`/my-files/${file.id}`} className="block">
-              <div className="aspect-square relative bg-muted/20 flex items-center justify-center overflow-hidden">
-                {file.previewImage ? (
-                  <img
-                    src={file.previewImage}
-                    alt={file.fileName}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-1.5">
-                    {getFileIcon(file.mimeType)}
-                    <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
-                      {file.mimeType.split("/")[1]}
-                    </span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <Button size="icon" variant="secondary" className="h-8 w-8">
-                    <Eye className="h-3.5 w-3.5" />
-                  </Button>
+            <div className="aspect-square relative bg-muted/20 flex items-center justify-center overflow-hidden">
+              {file.previewImage ? (
+                <img
+                  src={file.previewImage}
+                  alt={file.fileName}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-1.5">
+                  {getFileIcon(file.mimeType)}
+                  <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
+                    {file.mimeType.split("/")[1]}
+                  </span>
+                </div>
+              )}
+              <div
+                className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() => openViewer(file)}
+              >
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="h-8 w-8"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openViewer(file);
+                  }}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="h-8 w-8"
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-32">
+                      <DropdownMenuItem onClick={() => openViewer(file)}>
+                        <Eye className="h-3.5 w-3.5 mr-2" />
+                        View
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleStartEdit(file.id, file.fileName)}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-2" />
+                        Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setListingFile({ id: file.id, name: file.fileName })
+                        }
+                      >
+                        <Tag className="h-3.5 w-3.5 mr-2" />
+                        List on Market
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => setDeletingId(file.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-            </Link>
+            </div>
             <CardHeader className="p-3 space-y-0.5">
               {editingId === file.id ? (
                 <div className="flex items-center gap-1 mb-1">
@@ -193,52 +258,13 @@ export function CollectionView() {
                   </Button>
                 </div>
               ) : (
-                <div className="flex justify-between items-center">
-                  <Link href={`/my-files/${file.id}`} className="flex-1">
-                    <CardTitle
-                      className="text-xs font-medium truncate cursor-pointer hover:text-primary transition-colors"
-                      title={file.fileName}
-                    >
-                      {file.fileName}
-                    </CardTitle>
-                  </Link>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-7 w-7">
-                        <MoreVertical className="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-32">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/my-files/${file.id}`}>
-                          <Eye className="h-3.5 w-3.5 mr-2" />
-                          Open
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleStartEdit(file.id, file.fileName)}
-                      >
-                        <Pencil className="h-3.5 w-3.5 mr-2" />
-                        Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setListingFile({ id: file.id, name: file.fileName })
-                        }
-                      >
-                        <Tag className="h-3.5 w-3.5 mr-2" />
-                        List on Market
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => setDeletingId(file.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                <CardTitle
+                  className="text-xs font-medium truncate cursor-pointer hover:text-primary transition-colors"
+                  title={file.fileName}
+                  onClick={() => openViewer(file)}
+                >
+                  {file.fileName}
+                </CardTitle>
               )}
               <div className="flex justify-between items-center text-[10px] text-muted-foreground">
                 <span>{formatBytes(file.size)}</span>

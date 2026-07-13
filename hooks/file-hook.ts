@@ -4,6 +4,7 @@ import {
   updateFileApi,
   deleteFileApi,
   openFileApi,
+  openFilePageApi,
 } from "@/apis/file";
 import { FileType } from "@/types/file-type";
 import { PaginatedResponse } from "@/types/paginated-response";
@@ -60,32 +61,6 @@ export const useMyFiles = () => {
     },
   });
 
-  const openFileMutation = useMutation({
-    mutationFn: async ({
-      fileId,
-      mimeType,
-    }: {
-      fileId: string;
-      mimeType?: string;
-    }) => {
-      toast.loading("Opening file...", { id: "open-file" });
-      const blob = await openFileApi(fileId);
-      if (mimeType) {
-        return new Blob([blob], { type: mimeType });
-      }
-      return blob;
-    },
-    onSuccess: (blob: Blob) => {
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, "_blank");
-      toast.success("File opened", { id: "open-file" });
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to open file", {
-        id: "open-file",
-      });
-    },
-  });
   return {
     files: data?.data || [],
     isLoading,
@@ -100,7 +75,21 @@ export const useMyFiles = () => {
     isUpdating: updateFileMutation.isPending,
     deleteFile: deleteFileMutation.mutateAsync,
     isDeleting: deleteFileMutation.isPending,
-    openFile: openFileMutation.mutateAsync,
-    isOpening: openFileMutation.isPending,
+  };
+};
+
+export const useFileViewer = () => {
+  const openFilePageMutation = useMutation({
+    mutationFn: async ({ fileId, page }: { fileId: string; page: number }) => {
+      return await openFilePageApi(fileId, page);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to load file page");
+    },
+  });
+
+  return {
+    openFilePage: openFilePageMutation.mutateAsync,
+    isLoadingPage: openFilePageMutation.isPending,
   };
 };

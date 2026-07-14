@@ -5,6 +5,9 @@ import {
   deleteFileApi,
   openFileApi,
   openFilePageApi,
+  createStreamSessionApi,
+  getStreamStatusApi,
+  reprocessStreamApi,
 } from "@/apis/file";
 import { FileType } from "@/types/file-type";
 import { PaginatedResponse } from "@/types/paginated-response";
@@ -78,6 +81,16 @@ export const useMyFiles = () => {
   };
 };
 
+export const useStreamStatus = (fileId: string, enabled: boolean) => {
+  return useQuery({
+    queryKey: ["stream-status", fileId],
+    queryFn: () => getStreamStatusApi(fileId),
+    enabled: enabled && Boolean(fileId),
+    refetchInterval: (query) =>
+      query.state.data?.status === "processing" ? 3000 : false,
+  });
+};
+
 export const useFileViewer = () => {
   const openFilePageMutation = useMutation({
     mutationFn: async ({ fileId, page }: { fileId: string; page: number }) => {
@@ -88,8 +101,34 @@ export const useFileViewer = () => {
     },
   });
 
+  const createStreamSessionMutation = useMutation({
+    mutationFn: async (fileId: string) => {
+      return await createStreamSessionApi(fileId);
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.message || "Failed to start playback session",
+      );
+    },
+  });
+
+  const reprocessStreamMutation = useMutation({
+    mutationFn: async (fileId: string) => {
+      return await reprocessStreamApi(fileId);
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.message || "Failed to reprocess stream",
+      );
+    },
+  });
+
   return {
     openFilePage: openFilePageMutation.mutateAsync,
     isLoadingPage: openFilePageMutation.isPending,
+    createStreamSession: createStreamSessionMutation.mutateAsync,
+    isCreatingStreamSession: createStreamSessionMutation.isPending,
+    reprocessStream: reprocessStreamMutation.mutateAsync,
+    isReprocessingStream: reprocessStreamMutation.isPending,
   };
 };

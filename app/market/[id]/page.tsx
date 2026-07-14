@@ -55,6 +55,16 @@ export default function ListingDetailPage() {
     }
   }, [listingId]);
 
+  const refreshListing = async () => {
+    try {
+      const data = await getListingApi(listingId);
+      setListing(data);
+    } catch (error) {
+      console.error(error);
+      router.push("/my-listings");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-10 px-4 md:px-6">
@@ -252,6 +262,7 @@ export default function ListingDetailPage() {
         listing={listing}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
+        onUpdated={refreshListing}
       />
     </div>
   );

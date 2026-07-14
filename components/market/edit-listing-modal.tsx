@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { ListingType } from "@/types/listing-type";
-
 import * as z from "zod";
 import {
   Dialog,
@@ -16,11 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useMarket } from "@/hooks/market-hook";
 import { Loader2 } from "lucide-react";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -31,9 +32,10 @@ const formSchema = z
   .object({
     buyPrice: z.string().optional(),
     hirePrice: z.string().optional(),
+    isActive: z.boolean(),
   })
-  .refine((data) => data.buyPrice || data.hirePrice, {
-    message: "At least one price (sale or hire) must be provided",
+  .refine((data) => !data.isActive || data.buyPrice || data.hirePrice, {
+    message: "Active listings need at least one price (sale or hire)",
     path: ["buyPrice"],
   });
 
@@ -43,12 +45,14 @@ interface EditListingModalProps {
   listing: ListingType | null;
   isOpen: boolean;
   onClose: () => void;
+  onUpdated?: () => void;
 }
 
 export function EditListingModal({
   listing,
   isOpen,
   onClose,
+  onUpdated,
 }: EditListingModalProps) {
   const { updateListing, isUpdating } = useMarket();
 
@@ -57,14 +61,16 @@ export function EditListingModal({
     defaultValues: {
       buyPrice: "",
       hirePrice: "",
+      isActive: true,
     },
   });
 
   useEffect(() => {
     if (listing) {
       form.reset({
-        buyPrice: listing.buyPrice || "",
-        hirePrice: listing.hirePrice || "",
+        buyPrice: listing.buyPrice != null ? String(listing.buyPrice) : "",
+        hirePrice: listing.hirePrice != null ? String(listing.hirePrice) : "",
+        isActive: listing.isActive,
       });
     }
   }, [listing, form]);
@@ -78,8 +84,10 @@ export function EditListingModal({
         data: {
           buyPrice: values.buyPrice || undefined,
           hirePrice: values.hirePrice || undefined,
+          isActive: values.isActive,
         },
       });
+      onUpdated?.();
       onClose();
     } catch (error) {
       console.error("Failed to update listing", error);
@@ -92,7 +100,8 @@ export function EditListingModal({
         <DialogHeader>
           <DialogTitle>Edit Listing</DialogTitle>
           <DialogDescription>
-            Update your prices for "{listing?.file.metadata.fileName}".
+            Update prices and active status for &quot;
+            {listing?.file.metadata.fileName}&quot;.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -132,6 +141,38 @@ export function EditListingModal({
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-start gap-3 rounded-lg border p-3">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 accent-primary"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        id="listing-is-active"
+                      />
+                    </FormControl>
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="listing-is-active"
+                        className="cursor-pointer font-medium"
+                      >
+                        Active on marketplace
+                      </Label>
+                      <FormDescription>
+                        Inactive listings are hidden from the public market but
+                        keep their prices so you can re-activate later.
+                      </FormDescription>
+                    </div>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

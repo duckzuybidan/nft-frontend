@@ -4,9 +4,9 @@ import { useMyFiles } from "@/hooks/file-hook";
 import { formatBytes } from "@/lib/utils";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -23,6 +23,8 @@ import {
   Check,
   X,
   Eye,
+  LayoutGrid,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -127,16 +129,28 @@ export function CollectionView() {
 
   if (files.length === 0) {
     return (
-      <Card className="border-dashed flex flex-col items-center justify-center py-20">
+      <Card className="border-dashed flex flex-col items-center justify-center py-20 bg-muted/5">
         <CardHeader className="text-center">
-          <CardTitle>No files found</CardTitle>
-          <CardDescription>You haven't uploaded any files yet.</CardDescription>
+          <div className="mx-auto w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+            <LayoutGrid className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <CardTitle className="text-xl">Your collection is empty</CardTitle>
+          <CardDescription className="max-w-sm mx-auto">
+            Upload images, videos, audio, or documents to build your NFT
+            collection and list them on the marketplace.
+          </CardDescription>
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button asChild size="lg">
+              <Link href="/upload">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload your first file
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <Link href="/market">Browse marketplace</Link>
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <a href="/upload">Upload your first file</a>
-          </Button>
-        </CardContent>
       </Card>
     );
   }

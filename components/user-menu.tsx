@@ -12,7 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/auth-hook";
-import { Upload, LayoutGrid, ShoppingBag } from "lucide-react";
+import { Upload, LayoutGrid, ShoppingBag, ListChecks } from "lucide-react";
 import Link from "next/link";
 
 export function UserMenu() {
@@ -49,6 +49,12 @@ export function UserMenu() {
             <DropdownMenuItem className="cursor-pointer">
               <LayoutGrid className="mr-2 h-4 w-4" />
               <span>My Collection</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/my-listings">
+            <DropdownMenuItem className="cursor-pointer">
+              <ListChecks className="mr-2 h-4 w-4" />
+              <span>My Listings</span>
             </DropdownMenuItem>
           </Link>
           <Link href="/market">

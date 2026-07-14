@@ -32,6 +32,12 @@ export default function Header() {
             Marketplace
           </Link>
           <Link
+            href="/my-listings"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            My Listings
+          </Link>
+          <Link
             href="/my-collection"
             className="text-muted-foreground hover:text-foreground transition-colors"
           >

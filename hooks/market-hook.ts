@@ -1,19 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getMarketListingsApi,
-
+  getMyListingsApi,
   updateListingApi,
   removeListingApi,
   listFileApi,
   buyFileApi,
+  UpdateListingData,
 } from "@/apis/market";
 import { PaginatedResponse } from "@/types/paginated-response";
 import { ListingType } from "@/types/listing-type";
 import { toast } from "sonner";
 import { useState } from "react";
+import { nftService } from "@/services/nft";
 
-import {nftService} from "@/services/nft";
-
+const invalidateMarketQueries = (queryClient: ReturnType<typeof useQueryClient>) => {
+  queryClient.invalidateQueries({ queryKey: ["market-listings"] });
+  queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+};
 
 export const useMarket = () => {
   const queryClient = useQueryClient();
@@ -39,10 +43,10 @@ export const useMarket = () => {
       data,
     }: {
       listingId: string;
-      data: { hirePrice?: string; buyPrice?: string; tokenId?: string };
+      data: UpdateListingData;
     }) => updateListingApi(listingId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["market-listings"] });
+      invalidateMarketQueries(queryClient);
       toast.success("Listing updated successfully");
     },
     onError: (error: any) => {
@@ -53,7 +57,7 @@ export const useMarket = () => {
   const removeListingMutation = useMutation({
     mutationFn: (listingId: string) => removeListingApi(listingId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["market-listings"] });
+      invalidateMarketQueries(queryClient);
       toast.success("Listing removed successfully");
     },
     onError: (error: any) => {
@@ -63,11 +67,10 @@ export const useMarket = () => {
 
   const listFileMutation = useMutation({
     mutationFn: async (data: {
-      fileId: string; 
-
+      fileId: string;
       hirePrice?: string;
       buyPrice?: string;
-    }) => {  
+    }) => {
       const { tokenId } = await nftService.publishContent({
         metadataURI: data.fileId,
         contentHash:
@@ -75,51 +78,37 @@ export const useMarket = () => {
         contentType: 0,
         title: "Movie",
       });
-       
+
       await listFileApi({
         ...data,
         tokenId: tokenId.toString(),
       });
- 
     },
-
-    onSuccess: async () => { 
-      await queryClient.invalidateQueries({
-        queryKey: ["market-listings"],
-      });
-
+    onSuccess: async () => {
+      await invalidateMarketQueries(queryClient);
       toast.success("File listed successfully");
     },
-
     onError: (error: any) => {
       console.error(error);
-      toast.error(
-        error.response?.data?.message || "Failed to list file"
-      );
+      toast.error(error.response?.data?.message || "Failed to list file");
     },
   });
 
   const buyFileMutation = useMutation({
-    mutationFn: async (data: {
-      fileId: string;  
-      price: string; 
-      }) => {  
-        console.log("Buying file with data:", data.price);
-        const result = await nftService.purchaseContent(
-          parseInt(data.fileId),
-          data.price.toString()
-        );
+    mutationFn: async (data: { fileId: string; price: string }) => {
+      const result = await nftService.purchaseContent(
+        parseInt(data.fileId),
+        data.price.toString(),
+      );
 
-      // Only call API if blockchain transaction succeeded
       if (result?.receipt?.status === "success") {
         return await buyFileApi(data.fileId);
       }
 
       throw new Error("NFT purchase failed");
-  },
-
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["market-listings"] });
+      invalidateMarketQueries(queryClient);
       toast.success("File bought successfully");
     },
     onError: (error: any) => {
@@ -146,5 +135,30 @@ export const useMarket = () => {
     isListing: listFileMutation.isPending,
     buyFile: buyFileMutation.mutateAsync,
     isBuying: buyFileMutation.isPending,
+  };
+};
+
+export const useMyListings = () => {
+  const [page, setPage] = useState(1);
+  const limit = 10;
+
+  const { data, isLoading, error, isFetching } = useQuery<
+    PaginatedResponse<ListingType>
+  >({
+    queryKey: ["my-listings", page],
+    queryFn: () => getMyListingsApi(page, limit),
+  });
+
+  return {
+    listings: data?.data || [],
+    isLoading,
+    isFetching,
+    error,
+    pagination: {
+      page: data?.page || 1,
+      totalPages: data?.totalPages || 1,
+      total: data?.total || 0,
+      setPage,
+    },
   };
 };

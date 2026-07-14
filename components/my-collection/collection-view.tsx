@@ -62,7 +62,7 @@ export function CollectionView() {
         JSON.stringify({ fileName: file.fileName, mimeType: file.mimeType }),
       );
     }
-    router.push(`/my-files/${file.id}`);
+    router.push(`/files/${file.id}`);
   };
 
   const [editingId, setEditingId] = useState<string | null>(null);

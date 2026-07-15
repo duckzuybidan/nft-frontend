@@ -233,7 +233,7 @@ export default function ListingDetailPage() {
                   {listing.buyPrice && (
                     <Button
                       className="flex-1 h-12 text-lg font-semibold shadow-md hover:shadow-lg transition-shadow"
-                      onClick={() => buyFile({ fileId: listing.id, price: listing.buyPrice! })}
+                      onClick={() => buyFile({ fileId: listing.id, tokenID: listing.tokenId || "", price: listing.buyPrice! })}
                       disabled={isBuying}
                     >
                       {isBuying ? "Buying..." : `Buy ${listing.buyPrice} ETH`}

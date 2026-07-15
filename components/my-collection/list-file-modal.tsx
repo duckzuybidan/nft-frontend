@@ -68,10 +68,11 @@ export function ListFileModal({
 
   const onSubmit = async (values: FormValues) => {
     if (!fileId) return;
-
+    
     try {
       await listFile({
         fileId,
+        fileName,
         buyPrice: values.buyPrice || undefined,
         hirePrice: values.hirePrice || undefined,
       });

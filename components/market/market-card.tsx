@@ -19,7 +19,7 @@ export function MarketCard({ listing }: MarketCardProps) {
   const { address } = useAuth();
   const { removeListing, isRemoving, buyFile, isBuying } = useMarket();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const { id, file, hirePrice, buyPrice } = listing;
+  const { id, file, hirePrice, buyPrice, tokenId } = listing;
 
   const isOwner =
     address?.toLowerCase() === file.user.walletAddress.toLowerCase();
@@ -98,7 +98,7 @@ export function MarketCard({ listing }: MarketCardProps) {
                   className="flex-1 h-9 text-sm"
                   onClick={(e) => {
                     e.preventDefault();
-                    buyFile(id);
+                    buyFile({ fileId: id, tokenID: tokenId || "", price: buyPrice });
                   }}
                   disabled={isBuying}
                 >

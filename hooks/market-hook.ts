@@ -6,6 +6,7 @@ import {
   removeListingApi,
   listFileApi,
   buyFileApi,
+  createNftMetadataApi,
   UpdateListingData,
 } from "@/apis/market";
 import { PaginatedResponse } from "@/types/paginated-response";
@@ -68,19 +69,26 @@ export const useMarket = () => {
   const listFileMutation = useMutation({
     mutationFn: async (data: {
       fileId: string;
+      fileName: string;
       hirePrice?: string;
       buyPrice?: string;
     }) => {
+      const metadata = await createNftMetadataApi(data.fileId);
+
       const { tokenId } = await nftService.publishContent({
-        metadataURI: data.fileId,
-        contentHash:
-          "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        contentType: 0,
-        title: "Movie",
+        metadataURI: metadata.metadataURI,
+        contentHash: metadata.contentHash,
+        contentType: metadata.contentType,
+        contentPrice: data.buyPrice || "0",
+        accessPrice: data.hirePrice || "0",
+        maxPasses: 100,
+        title: metadata.title || data.fileName,
       });
 
       await listFileApi({
-        ...data,
+        fileId: data.fileId,
+        hirePrice: data.hirePrice,
+        buyPrice: data.buyPrice,
         tokenId: tokenId.toString(),
       });
     },
@@ -95,9 +103,9 @@ export const useMarket = () => {
   });
 
   const buyFileMutation = useMutation({
-    mutationFn: async (data: { fileId: string; price: string }) => {
+    mutationFn: async (data: { fileId: string; tokenID: string; price: string }) => {
       const result = await nftService.purchaseContent(
-        parseInt(data.fileId),
+        parseInt(data.tokenID),
         data.price.toString(),
       );
 

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useAccount, useSignMessage } from "wagmi";
-import { useMutation } from "@tanstack/react-query";
-import { getNonceApi, verifySignatureApi } from "@/apis/auth";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { getNonceApi, verifySignatureApi, syncOwnershipApi } from "@/apis/auth";
 import { ACCESS_TOKEN } from "@/lib/var";
 import { signMessage } from "@/lib/utils";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 export const useAuth = () => {
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const queryClient = useQueryClient();
 
   const [token, setToken] = useState<string | null>(null);
 
@@ -33,12 +34,21 @@ export const useAuth = () => {
       });
     },
 
-    onSuccess: (data) => {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(ACCESS_TOKEN, data.accessToken);
-        setToken(data.accessToken);
-        toast.success("Successfully logged in");
+    onSuccess: async (data) => {
+      if (typeof window === "undefined") return;
+
+      localStorage.setItem(ACCESS_TOKEN, data.accessToken);
+      setToken(data.accessToken);
+
+      try {
+        await syncOwnershipApi();
+        await queryClient.invalidateQueries({ queryKey: ["my-files"] });
+        await queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+      } catch (error) {
+        console.error("Ownership sync failed:", error);
       }
+
+      toast.success("Successfully logged in");
     },
 
     onError: (error: any) => {

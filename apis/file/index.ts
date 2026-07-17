@@ -4,6 +4,13 @@ import { updateFileApi } from "./update-file-api";
 import { openFileApi } from "./open-file-apis";
 import { openFilePageApi } from "./open-file-page-api";
 import { createStreamSessionApi, getStreamStatusApi, reprocessStreamApi } from "./stream-api";
+import {
+  createImageSessionApi,
+  getImageTileStatusApi,
+  reprocessImageTilesApi,
+  fetchImageManifestApi,
+  fetchEncryptedTileApi,
+} from "./image-stream-api";
 
 export {
   getMyFilesApi,
@@ -14,4 +21,9 @@ export {
   createStreamSessionApi,
   getStreamStatusApi,
   reprocessStreamApi,
+  createImageSessionApi,
+  getImageTileStatusApi,
+  reprocessImageTilesApi,
+  fetchImageManifestApi,
+  fetchEncryptedTileApi,
 };

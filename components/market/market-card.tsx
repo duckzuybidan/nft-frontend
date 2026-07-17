@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { formatBytes } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Film, Music, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -10,6 +9,8 @@ import { ListingType } from "@/types/listing-type";
 import { useAuth } from "@/hooks/auth-hook";
 import { useMarket } from "@/hooks/market-hook";
 import { EditListingModal } from "./edit-listing-modal";
+import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/locale-provider";
 
 interface MarketCardProps {
   listing: ListingType;
@@ -17,9 +18,13 @@ interface MarketCardProps {
 
 export function MarketCard({ listing }: MarketCardProps) {
   const { address } = useAuth();
-  const { removeListing, isRemoving, buyFile, isBuying } = useMarket();
+  const { t } = useLocale();
+  const { removeListing, isRemoving, buyFile, isBuying, buyCopy, isBuyingCopy } =
+    useMarket();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const { id, file, hirePrice, buyPrice, tokenId } = listing;
+  const { id, file, buyPrice, tokenId, copiesRemaining, copiesSoldOut } =
+    listing;
+  const copyPrice = listing.copyPrice ?? listing.hirePrice;
 
   const isOwner =
     address?.toLowerCase() === file.user.walletAddress.toLowerCase();
@@ -33,102 +38,147 @@ export function MarketCard({ listing }: MarketCardProps) {
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith("image/")) return null;
     if (mimeType.startsWith("video/"))
-      return <Film className="h-8 w-8 text-blue-500" />;
+      return <Film className="h-8 w-8 text-sky-400" />;
     if (mimeType.startsWith("audio/"))
-      return <Music className="h-8 w-8 text-purple-500" />;
+      return <Music className="h-8 w-8 text-teal-400" />;
     if (mimeType.startsWith("text/"))
-      return <Type className="h-8 w-8 text-orange-500" />;
-    return <FileText className="h-8 w-8 text-gray-500" />;
+      return <Type className="h-8 w-8 text-amber-400" />;
+    return <FileText className="h-8 w-8 text-muted-foreground" />;
   };
 
   return (
-    <Link href={`/market/${id}`} className="block">
-      <Card className="overflow-hidden flex flex-col h-full hover:border-primary/50 transition-colors cursor-pointer">
-        {/* Image Container */}
-        <div className="w-full h-48 relative bg-muted flex items-center justify-center overflow-hidden">
+    <Link href={`/market/${id}`} className="block h-full">
+      <article className="surface-card hover-lift group flex h-full flex-col overflow-hidden">
+        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           {file.metadata.previewImage ? (
             <img
               src={file.metadata.previewImage}
               alt={file.metadata.fileName}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex h-full flex-col items-center justify-center gap-2">
               {getFileIcon(file.metadata.mimeType)}
-              <span className="text-xs text-muted-foreground uppercase">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
                 {file.metadata.mimeType.split("/")[1]}
               </span>
             </div>
           )}
+          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/55 to-transparent opacity-80" />
+          <div className="absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
+            {buyPrice && (
+              <span className="rounded-md bg-black/65 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
+                {t("content")}
+              </span>
+            )}
+            {copyPrice && (
+              <span className="rounded-md bg-primary/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
+                {t("copy")}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Content */}
-        <CardContent className="p-4 flex flex-col flex-1">
+        <div className="flex flex-1 flex-col p-4">
           <h3
-            className="font-medium line-clamp-2 mb-2"
+            className="line-clamp-2 text-sm font-semibold leading-snug"
             title={file.metadata.fileName}
           >
             {file.metadata.fileName}
           </h3>
-
-          <div className="text-xs text-muted-foreground mb-3">
+          <p className="mt-1 text-xs text-muted-foreground">
             {formatBytes(file.metadata.size)}
-          </div>
+          </p>
 
-          {/* Pricing */}
-          <div className="space-y-2 mb-4">
+          <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
             {buyPrice && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Buy</span>
-                <span className="font-bold text-primary">{buyPrice} ETH</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {t("buyContent")}
+                </span>
+                <span className="text-sm font-semibold tabular-nums text-primary">
+                  {buyPrice} ETH
+                </span>
               </div>
             )}
-            {hirePrice && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Hire</span>
-                <span className="font-bold">{hirePrice} ETH</span>
+            {copyPrice && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {t("buyCopy")}
+                </span>
+                <span className="text-sm font-semibold tabular-nums">
+                  {copyPrice} ETH
+                </span>
               </div>
+            )}
+            {copyPrice && copiesRemaining != null && (
+              <p
+                className={cn(
+                  "text-[11px]",
+                  copiesSoldOut ? "text-destructive" : "text-muted-foreground",
+                )}
+              >
+                {copiesSoldOut
+                  ? t("soldOut")
+                  : `${copiesRemaining} ${t("copiesRemaining")}`}
+              </p>
             )}
           </div>
 
           {!isOwner ? (
-            <div className="flex w-full gap-2 mt-auto">
+            <div className="mt-auto flex w-full gap-2 pt-4">
               {buyPrice && (
                 <Button
-                  className="flex-1 h-9 text-sm"
+                  className="h-9 flex-1 rounded-full text-xs font-semibold"
                   onClick={(e) => {
                     e.preventDefault();
-                    buyFile({ fileId: id, tokenID: tokenId || "", price: buyPrice });
+                    buyFile({
+                      fileId: id,
+                      tokenID: tokenId || "",
+                      price: String(buyPrice),
+                    });
                   }}
                   disabled={isBuying}
                 >
-                  {isBuying ? "Buying..." : "Buy"}
+                  {isBuying ? t("buying") : t("buyContent")}
                 </Button>
               )}
-              {hirePrice && (
+              {copyPrice && (
                 <Button
-                  className="flex-1 h-9 text-sm"
+                  className="h-9 flex-1 rounded-full text-xs font-semibold"
                   variant="secondary"
-                  onClick={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    buyCopy({
+                      listingId: id,
+                      tokenId: tokenId || "",
+                      price: String(copyPrice),
+                    });
+                  }}
+                  disabled={isBuyingCopy || copiesSoldOut}
                 >
-                  Hire
+                  {isBuyingCopy
+                    ? t("buying")
+                    : copiesSoldOut
+                      ? t("soldOut")
+                      : t("buyCopy")}
                 </Button>
               )}
             </div>
           ) : (
-            <div className="flex w-full gap-2 mt-auto">
+            <div className="mt-auto flex w-full gap-2 pt-4">
               <Button
-                className="flex-1 h-9 text-sm"
+                className="h-9 flex-1 rounded-full text-xs"
                 variant="outline"
                 onClick={(e) => {
                   e.preventDefault();
                   setIsEditModalOpen(true);
                 }}
               >
-                Edit
+                {t("edit")}
               </Button>
               <Button
-                className="flex-1 h-9 text-sm"
+                className="h-9 flex-1 rounded-full text-xs"
                 variant="destructive"
                 onClick={(e) => {
                   e.preventDefault();
@@ -136,18 +186,18 @@ export function MarketCard({ listing }: MarketCardProps) {
                 }}
                 disabled={isRemoving}
               >
-                Remove
+                {t("remove")}
               </Button>
             </div>
           )}
-        </CardContent>
+        </div>
 
         <EditListingModal
           listing={listing}
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
         />
-      </Card>
+      </article>
     </Link>
   );
 }

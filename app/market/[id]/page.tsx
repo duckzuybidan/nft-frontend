@@ -5,36 +5,32 @@ import { useParams, useRouter } from "next/navigation";
 import { getListingApi } from "@/apis/market";
 import { ListingType } from "@/types/listing-type";
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
   FileText,
   Film,
   Music,
   Type,
   ShoppingCart,
-  Calendar,
+  Copy,
   ArrowLeft,
 } from "lucide-react";
 import { formatBytes } from "@/lib/utils";
 import { useAuth } from "@/hooks/auth-hook";
 import { useMarket } from "@/hooks/market-hook";
 import { EditListingModal } from "@/components/market/edit-listing-modal";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useLocale } from "@/lib/locale-provider";
 
 export default function ListingDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useLocale();
   const [listing, setListing] = useState<ListingType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { address } = useAuth();
-  const { removeListing, isRemoving, buyFile, isBuying } = useMarket();
+  const { removeListing, isRemoving, buyFile, isBuying, buyCopy, isBuyingCopy } =
+    useMarket();
 
   const listingId = params.id as string;
 
@@ -112,149 +108,181 @@ export default function ListingDetailPage() {
   };
 
   return (
-    <div className="container mx-auto py-10 px-4 md:px-6">
+    <div className="container mx-auto px-4 py-8 md:px-6 md:py-10">
       <Button
         variant="ghost"
-        className="mb-6"
+        className="mb-6 rounded-full"
         onClick={() => router.push("/market")}
       >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Marketplace
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        {t("backToMarketplace")}
       </Button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Image/Preview Section */}
-        <div className="space-y-4">
-          <Card className="overflow-hidden">
-            <div className="aspect-square relative bg-muted/20 flex items-center justify-center overflow-hidden">
-              {listing.file.metadata.previewImage ? (
-                <img
-                  src={listing.file.metadata.previewImage}
-                  alt={listing.file.metadata.fileName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-4">
-                  {getFileIcon(listing.file.metadata.mimeType)}
-                  <span className="text-sm font-mono text-muted-foreground uppercase">
-                    {listing.file.metadata.mimeType.split("/")[1]}
-                  </span>
-                </div>
-              )}
-            </div>
-          </Card>
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-10">
+        <div className="surface-card overflow-hidden">
+          <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-muted/40">
+            {listing.file.metadata.previewImage ? (
+              <img
+                src={listing.file.metadata.previewImage}
+                alt={listing.file.metadata.fileName}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                {getFileIcon(listing.file.metadata.mimeType)}
+                <span className="font-mono text-sm uppercase text-muted-foreground">
+                  {listing.file.metadata.mimeType.split("/")[1]}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Info Section */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">
-                {listing.file.metadata.fileName}
-              </CardTitle>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline">
-                  {formatBytes(listing.file.metadata.size)}
-                </Badge>
-                <Badge variant="outline">
-                  {listing.file.metadata.mimeType}
-                </Badge>
-              </div>
-            </CardHeader>
+          <div>
+            <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+              {listing.file.metadata.fileName}
+            </h1>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Badge variant="outline">
+                {formatBytes(listing.file.metadata.size)}
+              </Badge>
+              <Badge variant="outline">{listing.file.metadata.mimeType}</Badge>
+            </div>
+          </div>
 
-            <CardContent className="space-y-4">
+          <div className="surface-card space-y-5 p-5">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                  Owner
+                <h3 className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {t("owner")}
                 </h3>
-                <p className="font-mono">
+                <p className="font-mono text-sm">
                   {listing.file.user.walletAddress.slice(0, 6)}...
                   {listing.file.user.walletAddress.slice(-4)}
                 </p>
               </div>
-
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                  Listed At
+                <h3 className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {t("listed")}
                 </h3>
-                <p>{new Date(listing.createdAt).toLocaleString()}</p>
+                <p className="text-sm">
+                  {new Date(listing.createdAt).toLocaleString()}
+                </p>
               </div>
+            </div>
 
-              <div className="pt-4 border-t">
-                <h3 className="text-lg font-semibold mb-4">Pricing</h3>
-                <div className="space-y-3">
-                  {listing.buyPrice && (
-                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <ShoppingCart className="h-5 w-5 text-primary" />
-                        <span className="font-medium">Buy Now</span>
-                      </div>
-                      <span className="text-xl font-bold text-primary">
-                        {listing.buyPrice} ETH
+            <div className="border-t border-border/70 pt-5">
+              <h3 className="font-display mb-3 text-lg font-semibold">
+                {t("pricing")}
+              </h3>
+              <div className="space-y-3">
+                {listing.buyPrice && (
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                        <ShoppingCart className="h-5 w-5" />
                       </span>
-                    </div>
-                  )}
-                  {listing.hirePrice && (
-                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        <span className="font-medium">Hire</span>
+                      <div>
+                        <span className="font-medium">{t("buyContent")}</span>
+                        <p className="text-xs text-muted-foreground">
+                          {t("buyContentHint")}
+                        </p>
                       </div>
-                      <span className="text-xl font-bold text-primary">
-                        {listing.hirePrice} ETH
-                      </span>
                     </div>
-                  )}
-                </div>
+                    <span className="font-display text-xl font-semibold tabular-nums text-primary">
+                      {listing.buyPrice} ETH
+                    </span>
+                  </div>
+                )}
+                {(listing.copyPrice ?? listing.hirePrice) && (
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-4">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground">
+                        <Copy className="h-5 w-5" />
+                      </span>
+                      <div>
+                        <span className="font-medium">{t("buyCopy")}</span>
+                        <p className="text-xs text-muted-foreground">
+                          {t("buyCopyHint")}
+                          {listing.copiesRemaining != null
+                            ? ` · ${listing.copiesRemaining} ${t("remaining")}`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="font-display text-xl font-semibold tabular-nums">
+                      {listing.copyPrice ?? listing.hirePrice} ETH
+                    </span>
+                  </div>
+                )}
               </div>
-            </CardContent>
+            </div>
 
-            <CardFooter className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 pt-1">
               {isOwner ? (
                 <div className="flex w-full gap-3">
                   <Button
-                    className="flex-1"
+                    className="h-11 flex-1 rounded-full"
                     variant="outline"
                     onClick={() => setIsEditModalOpen(true)}
                   >
-                    Edit Listing
+                    {t("editListing")}
                   </Button>
                   <Button
-                    className="flex-1"
+                    className="h-11 flex-1 rounded-full"
                     variant="destructive"
                     onClick={handleRemove}
                     disabled={isRemoving}
                   >
-                    Remove Listing
+                    {t("removeListing")}
                   </Button>
                 </div>
               ) : (
-                <div className="flex w-full gap-3">
+                <div className="flex w-full flex-col gap-3 sm:flex-row">
                   {listing.buyPrice && (
                     <Button
-                      className="flex-1 h-12 text-lg font-semibold shadow-md hover:shadow-lg transition-shadow"
-                      onClick={() => buyFile({ fileId: listing.id, tokenID: listing.tokenId || "", price: listing.buyPrice! })}
+                      className="h-12 flex-1 rounded-full text-base font-semibold"
+                      onClick={() =>
+                        buyFile({
+                          fileId: listing.id,
+                          tokenID: listing.tokenId || "",
+                          price: String(listing.buyPrice),
+                        })
+                      }
                       disabled={isBuying}
                     >
-                      {isBuying ? "Buying..." : `Buy ${listing.buyPrice} ETH`}
+                      {isBuying
+                        ? t("buying")
+                        : `${t("buyContent")} ${listing.buyPrice} ETH`}
                     </Button>
                   )}
-                  {listing.hirePrice && (
+                  {(listing.copyPrice ?? listing.hirePrice) && (
                     <Button
-                      className="flex-1 h-12 text-lg font-semibold shadow-sm"
-                      variant="default"
-                      style={{
-                        backgroundColor: "hsl(var(--muted))",
-                        color: "hsl(var(--foreground))",
-                      }}
+                      className="h-12 flex-1 rounded-full text-base font-semibold"
+                      variant="secondary"
+                      disabled={isBuyingCopy || listing.copiesSoldOut}
+                      onClick={() =>
+                        buyCopy({
+                          listingId: listing.id,
+                          tokenId: listing.tokenId || "",
+                          price: String(
+                            listing.copyPrice ?? listing.hirePrice,
+                          ),
+                        })
+                      }
                     >
-                      Hire {listing.hirePrice} ETH
+                      {isBuyingCopy
+                        ? t("buying")
+                        : listing.copiesSoldOut
+                          ? t("soldOut")
+                          : `${t("buyCopy")} ${listing.copyPrice ?? listing.hirePrice} ETH`}
                     </Button>
                   )}
                 </div>
               )}
-            </CardFooter>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
 

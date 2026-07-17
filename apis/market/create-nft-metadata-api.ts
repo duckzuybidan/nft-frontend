@@ -6,6 +6,7 @@ export interface NftMetadataResponse {
   metadataCid: string;
   contentHash: `0x${string}`;
   contentType: ContentType;
+  suggestedContentType?: ContentType;
   title: string;
   mimeType: string;
   previewImage?: string;
@@ -13,9 +14,11 @@ export interface NftMetadataResponse {
 
 export const createNftMetadataApi = async (
   fileId: string,
+  contentType?: ContentType,
 ): Promise<NftMetadataResponse> => {
   const response = await api.post<NftMetadataResponse>(
     `/market/metadata/${fileId}`,
+    contentType !== undefined ? { contentType } : {},
   );
   return response.data;
 };

@@ -542,4 +542,87 @@ export class ContentNFTService {
       },
     );
   }
+
+  async listCopyForSale(
+    contentId: number,
+    amount: number,
+    pricePerPassEth: string,
+  ) {
+    this.requireWallet();
+
+    const hash = await writeContract(this.config, {
+      address: this.accessTokenAddress,
+      abi: AccessTokenABI.abi,
+      functionName: "listForSale",
+      args: [
+        BigInt(contentId),
+        BigInt(amount),
+        parseEther(pricePerPassEth),
+      ],
+    });
+    const receipt = await this.wait(hash);
+
+    const accessAddr = this.accessTokenAddress.toLowerCase();
+    let listingId: bigint | null = null;
+    for (const log of receipt.logs || []) {
+      if ((log.address || "").toLowerCase() !== accessAddr) continue;
+      try {
+        const decoded = decodeEventLog({
+          abi: AccessTokenABI.abi,
+          data: log.data,
+          topics: log.topics,
+        });
+        if (decoded.eventName === "Listed") {
+          const args = decoded.args as any;
+          const raw = args.listingId ?? args[0];
+          if (raw !== undefined && raw !== null) {
+            listingId = BigInt(raw);
+            break;
+          }
+        }
+      } catch {
+        /* not our event */
+      }
+    }
+
+    if (listingId === null) {
+      const next = (await readContract(this.config, {
+        address: this.accessTokenAddress,
+        abi: AccessTokenABI.abi,
+        functionName: "nextListingId",
+        args: [],
+      })) as bigint;
+      listingId = next > 0n ? next - 1n : 0n;
+    }
+
+    return { hash, receipt, listingId };
+  }
+
+  async buySecondaryAccess(
+    listingId: number,
+    amount: number,
+    pricePerPassEth: string,
+  ) {
+    this.requireWallet();
+    const total = parseEther(pricePerPassEth) * BigInt(amount);
+    const hash = await writeContract(this.config, {
+      address: this.accessTokenAddress,
+      abi: AccessTokenABI.abi,
+      functionName: "buyAccess",
+      args: [BigInt(listingId), BigInt(amount)],
+      value: total,
+    });
+    return { hash, receipt: await this.wait(hash) };
+  }
+
+  async cancelSecondaryListing(listingId: number) {
+    this.requireWallet();
+    const hash = await writeContract(this.config, {
+      address: this.accessTokenAddress,
+      abi: AccessTokenABI.abi,
+      functionName: "cancelListing",
+      args: [BigInt(listingId)],
+    });
+    return { hash, receipt: await this.wait(hash) };
+  }
 }

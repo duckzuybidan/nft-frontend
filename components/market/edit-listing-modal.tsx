@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ListingType } from "@/types/listing-type";
+import { getCopyPrice, ListingType } from "@/types/listing-type";
 import * as z from "zod";
 import {
   Dialog,
@@ -31,11 +31,12 @@ import {
 const formSchema = z
   .object({
     buyPrice: z.string().optional(),
-    hirePrice: z.string().optional(),
+    copyPrice: z.string().optional(),
+    maxCopies: z.string().optional(),
     isActive: z.boolean(),
   })
-  .refine((data) => !data.isActive || data.buyPrice || data.hirePrice, {
-    message: "Active listings need at least one price (sale or hire)",
+  .refine((data) => !data.isActive || data.buyPrice || data.copyPrice, {
+    message: "Active listings need at least one price (Buy Content or Buy Copy)",
     path: ["buyPrice"],
   });
 
@@ -60,7 +61,8 @@ export function EditListingModal({
     resolver: zodResolver(formSchema),
     defaultValues: {
       buyPrice: "",
-      hirePrice: "",
+      copyPrice: "",
+      maxCopies: "100",
       isActive: true,
     },
   });
@@ -69,7 +71,9 @@ export function EditListingModal({
     if (listing) {
       form.reset({
         buyPrice: listing.buyPrice != null ? String(listing.buyPrice) : "",
-        hirePrice: listing.hirePrice != null ? String(listing.hirePrice) : "",
+        copyPrice: getCopyPrice(listing) ?? "",
+        maxCopies:
+          listing.maxCopies != null ? String(listing.maxCopies) : "100",
         isActive: listing.isActive,
       });
     }
@@ -83,7 +87,10 @@ export function EditListingModal({
         listingId: listing.id,
         data: {
           buyPrice: values.buyPrice || undefined,
-          hirePrice: values.hirePrice || undefined,
+          copyPrice: values.copyPrice || undefined,
+          maxCopies: values.maxCopies
+            ? Number.parseInt(values.maxCopies, 10)
+            : undefined,
           isActive: values.isActive,
         },
       });
@@ -114,12 +121,12 @@ export function EditListingModal({
               name="buyPrice"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Sale Price (ETH)</FormLabel>
+                  <FormLabel>Buy Content Price (ETH)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       step="0.001"
-                      placeholder="e.g. 0.05"
+                      placeholder="Ownership NFT — e.g. 0.05"
                       {...field}
                     />
                   </FormControl>
@@ -129,17 +136,30 @@ export function EditListingModal({
             />
             <FormField
               control={form.control}
-              name="hirePrice"
+              name="copyPrice"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Hire Price (ETH / day)</FormLabel>
+                  <FormLabel>Buy Copy Price (ETH)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       step="0.001"
-                      placeholder="e.g. 0.005"
+                      placeholder="Licensed copy — e.g. 0.005"
                       {...field}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="maxCopies"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Max Copies</FormLabel>
+                  <FormControl>
+                    <Input type="number" min={1} step={1} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

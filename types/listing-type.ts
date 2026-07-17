@@ -1,8 +1,15 @@
 export type ListingType = {
   id: string;
   tokenId?: string;
-  hirePrice?: string;
-  buyPrice?: string;
+  /** ERC-1155 Buy Copy price */
+  copyPrice?: string | number;
+  /** @deprecated Use copyPrice */
+  hirePrice?: string | number;
+  buyPrice?: string | number;
+  maxCopies?: number;
+  copiesSold?: number;
+  copiesRemaining?: number;
+  copiesSoldOut?: boolean;
   isActive: boolean;
   createdAt: string;
   file: {
@@ -24,3 +31,13 @@ export type ListingType = {
     };
   };
 };
+
+/** Normalize legacy hirePrice responses into copyPrice */
+export function getCopyPrice(listing: {
+  copyPrice?: string | number | null;
+  hirePrice?: string | number | null;
+}): string | undefined {
+  const value = listing.copyPrice ?? listing.hirePrice;
+  if (value === null || value === undefined || value === "") return undefined;
+  return String(value);
+}

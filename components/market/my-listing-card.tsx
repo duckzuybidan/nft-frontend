@@ -17,7 +17,8 @@ interface MyListingCardProps {
 export function MyListingCard({ listing }: MyListingCardProps) {
   const { updateListing, isUpdating, removeListing, isRemoving } = useMarket();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const { id, file, hirePrice, buyPrice, isActive } = listing;
+  const { id, file, buyPrice, isActive, copiesRemaining, maxCopies } = listing;
+  const copyPrice = listing.copyPrice ?? listing.hirePrice;
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith("image/")) return null;
@@ -83,14 +84,19 @@ export function MyListingCard({ listing }: MyListingCardProps) {
           <div className="space-y-2 mb-4">
             {buyPrice != null && buyPrice !== "" && (
               <div className="flex items-center justify-between">
-                <span className="text-sm">Buy</span>
+                <span className="text-sm">Buy Content</span>
                 <span className="font-bold text-primary">{buyPrice} ETH</span>
               </div>
             )}
-            {hirePrice != null && hirePrice !== "" && (
+            {copyPrice != null && copyPrice !== "" && (
               <div className="flex items-center justify-between">
-                <span className="text-sm">Hire</span>
-                <span className="font-bold">{hirePrice} ETH</span>
+                <span className="text-sm">Buy Copy</span>
+                <span className="font-bold">{copyPrice} ETH</span>
+              </div>
+            )}
+            {copyPrice != null && copyPrice !== "" && copiesRemaining != null && (
+              <div className="text-xs text-muted-foreground">
+                {copiesRemaining} / {maxCopies ?? "—"} copies remaining
               </div>
             )}
           </div>

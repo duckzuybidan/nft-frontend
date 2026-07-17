@@ -9,13 +9,17 @@ import {
   createNftMetadataApi,
   UpdateListingData,
 } from "@/apis/market";
+import buyCopyApi from "@/apis/market/buy-copy-api";
+import { syncOwnershipApi } from "@/apis/auth";
 import { PaginatedResponse } from "@/types/paginated-response";
 import { ListingType } from "@/types/listing-type";
 import { toast } from "sonner";
 import { useState } from "react";
 import { nftService } from "@/services/nft";
 
-const invalidateMarketQueries = (queryClient: ReturnType<typeof useQueryClient>) => {
+const invalidateMarketQueries = (
+  queryClient: ReturnType<typeof useQueryClient>,
+) => {
   queryClient.invalidateQueries({ queryKey: ["market-listings"] });
   queryClient.invalidateQueries({ queryKey: ["my-listings"] });
 };
@@ -70,26 +74,35 @@ export const useMarket = () => {
     mutationFn: async (data: {
       fileId: string;
       fileName: string;
-      hirePrice?: string;
+      copyPrice?: string;
       buyPrice?: string;
+      maxCopies?: number;
+      collectionId?: string;
+      contentType?: number;
     }) => {
-      const metadata = await createNftMetadataApi(data.fileId);
+      const metadata = await createNftMetadataApi(
+        data.fileId,
+        data.contentType as any,
+      );
+      const maxCopies = data.maxCopies ?? 100;
 
       const { tokenId } = await nftService.publishContent({
         metadataURI: metadata.metadataURI,
         contentHash: metadata.contentHash,
         contentType: metadata.contentType,
         contentPrice: data.buyPrice || "0",
-        accessPrice: data.hirePrice || "0",
-        maxPasses: 100,
+        accessPrice: data.copyPrice || "0",
+        maxPasses: maxCopies,
         title: metadata.title || data.fileName,
       });
 
       await listFileApi({
         fileId: data.fileId,
-        hirePrice: data.hirePrice,
+        copyPrice: data.copyPrice,
         buyPrice: data.buyPrice,
+        maxCopies,
         tokenId: tokenId.toString(),
+        collectionId: data.collectionId,
       });
     },
     onSuccess: async () => {
@@ -103,9 +116,13 @@ export const useMarket = () => {
   });
 
   const buyFileMutation = useMutation({
-    mutationFn: async (data: { fileId: string; tokenID: string; price: string }) => {
+    mutationFn: async (data: {
+      fileId: string;
+      tokenID: string;
+      price: string;
+    }) => {
       const result = await nftService.purchaseContent(
-        parseInt(data.tokenID),
+        parseInt(data.tokenID, 10),
         data.price.toString(),
       );
 
@@ -113,14 +130,53 @@ export const useMarket = () => {
         return await buyFileApi(data.fileId);
       }
 
-      throw new Error("NFT purchase failed");
+      throw new Error("Content ownership purchase failed");
     },
-    onSuccess: () => {
-      invalidateMarketQueries(queryClient);
-      toast.success("File bought successfully");
+    onSuccess: async () => {
+      await invalidateMarketQueries(queryClient);
+      await queryClient.invalidateQueries({ queryKey: ["my-files"] });
+      toast.success("Content ownership purchased");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to buy file");
+      toast.error(
+        error.response?.data?.message || "Failed to buy content ownership",
+      );
+    },
+  });
+
+  const buyCopyMutation = useMutation({
+    mutationFn: async (data: {
+      listingId: string;
+      tokenId: string;
+      price: string;
+      amount?: number;
+    }) => {
+      const amount = data.amount ?? 1;
+      const result = await nftService.purchaseAccess(
+        parseInt(data.tokenId, 10),
+        amount,
+        data.price.toString(),
+      );
+
+      if (result?.receipt?.status !== "success") {
+        throw new Error("Copy purchase transaction failed");
+      }
+
+      // Pass tx hash so backend can record AccessGrant even if AccessToken RPC lag / misconfig.
+      await buyCopyApi(data.listingId, amount, result.hash);
+      try {
+        await syncOwnershipApi();
+      } catch {
+        // Grant already written by buy-copy; sync is best-effort.
+      }
+    },
+    onSuccess: async () => {
+      await invalidateMarketQueries(queryClient);
+      await queryClient.invalidateQueries({ queryKey: ["my-files"] });
+      toast.success("Copy purchased — you can stream/view this content");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to buy copy");
     },
   });
 
@@ -143,6 +199,8 @@ export const useMarket = () => {
     isListing: listFileMutation.isPending,
     buyFile: buyFileMutation.mutateAsync,
     isBuying: buyFileMutation.isPending,
+    buyCopy: buyCopyMutation.mutateAsync,
+    isBuyingCopy: buyCopyMutation.isPending,
   };
 };
 

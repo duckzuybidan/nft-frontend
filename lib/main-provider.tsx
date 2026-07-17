@@ -5,6 +5,8 @@ import { mainnet, sepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/lib/theme-provider";
+import { LocaleProvider } from "@/lib/locale-provider";
 
 export const config = getDefaultConfig({
   appName: "NFT MARKET",
@@ -16,7 +18,6 @@ export const config = getDefaultConfig({
     [mainnet.id]: http("https://rpc.ankr.com/eth"),
 
     [sepolia.id]: http("https://ethereum-sepolia-rpc.publicnode.com"),
-
   },
 });
 
@@ -26,10 +27,14 @@ export function MainProvider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          {children}
-          <Toaster position="top-center" richColors />
-        </RainbowKitProvider>
+        <ThemeProvider>
+          <LocaleProvider>
+            <RainbowKitProvider>
+              {children}
+              <Toaster position="top-center" richColors />
+            </RainbowKitProvider>
+          </LocaleProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
